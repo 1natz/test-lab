@@ -1,51 +1,48 @@
-onst tiles = ['red', 'blue', 'green', 'yellow'];
+const tiles = ['red', 'blue', 'green', 'yellow'];
 let sequence = [];
 let playerSequence = [];
 let score = 0;
 let highScore = localStorage.getItem('colorMemoryHighScore') || 0;
 let isPlaying = false;
 
-document.getElementById('score').innerText = `Score: 0 | High Score: ${highScore}`;
+// --- Web Audio API Synth ---
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function startGame() {
-    sequence = [];
-    playerSequence = [];
-    score = 0;
-    updateScoreDisplay();
-    document.getElementById('start-btn').style.display = 'none';
-    nextRound();
+function playTone(frequency, type, duration) {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = type; // 'sine', 'square', 'sawtooth', 'triangle'
+    oscillator.frequency.value = frequency;
+
+    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + duration);
 }
 
-function updateScoreDisplay() {
-    document.getElementById('score').innerText = `Score: ${score > 0 ? score - 1 : 0} | High Score: ${highScore}`;
+function playTileSound(color) {
+    const tones = {
+        red: 329.63, // E4
+        blue: 261.63, // C4
+        green: 392.00, // G4
+        yellow: 523.25 // C5
+    };
+    playTone(tones[color] || 440, 'sine', 0.2);
 }
 
-function nextRound() {
-    playerSequence = [];
-    score++;
-    updateScoreDisplay();
-    const randomTile = tiles[Math.floor(Math.random() * tiles.length)];
-    sequence.push(randomTile);
-    playSequence();
+function playGameOverSound() {
+    playTone(150, 'sawtooth', 0.4);
 }
-
-function playSequence() {
-    isPlaying = false;
-    let i = 0;
-    const interval = setInterval(() => {
-        if (i >= sequence.length) {
-            clearInterval(interval);
-            isPlaying = true;
-            return;
-        }
-        flashTile(sequence[i]);
-        i++;
-    }, 600);
-}
-
-function flashTile(color) {
-    const tile = document.getElementById(color);
-    tile.classList.add('active');
+// ---------------------------
+    playTileSound(color); // Triggers audio synth on flash!
     setTimeout(() => {
         tile.classList.remove('active');
     }, 300);
@@ -56,10 +53,11 @@ document.querySelectorAll('.tile').forEach(tile => {
         if (!isPlaying) return;
         const color = e.target.dataset.color;
         playerSequence.push(color);
-        flashTile(color);
+        flashTile(color); // flashTile handles the click sound automatically
 
         const currentIndex = playerSequence.length - 1;
         if (playerSequence[currentIndex] !== sequence[currentIndex]) {
+            playGameOverSound(); // Triggers error sound on failure!
             const finalScore = score - 1;
             if (finalScore > highScore) {
                 highScore = finalScore;
