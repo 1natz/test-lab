@@ -64,26 +64,34 @@
 
     <button id="start-btn" onclick="startGame()">Start Game</button>
 
-    <script>
+<script>
         const tiles = ['red', 'blue', 'green', 'yellow'];
         let sequence = [];
         let playerSequence = [];
         let score = 0;
+        let highScore = localStorage.getItem('colorMemoryHighScore') || 0;
         let isPlaying = false;
+
+        // Display saved high score on load
+        document.getElementById('score').innerText = `Score: 0 | High Score: ${highScore}`;
 
         function startGame() {
             sequence = [];
             playerSequence = [];
             score = 0;
-            document.getElementById('score').innerText = `Score: ${score}`;
+            updateScoreDisplay();
             document.getElementById('start-btn').style.display = 'none';
             nextRound();
+        }
+
+        function updateScoreDisplay() {
+            document.getElementById('score').innerText = `Score: ${score > 0 ? score - 1 : 0} | High Score: ${highScore}`;
         }
 
         function nextRound() {
             playerSequence = [];
             score++;
-            document.getElementById('score').innerText = `Score: ${score - 1}`;
+            updateScoreDisplay();
             const randomTile = tiles[Math.floor(Math.random() * tiles.length)];
             sequence.push(randomTile);
             playSequence();
@@ -120,8 +128,16 @@
 
                 const currentIndex = playerSequence.length - 1;
                 if (playerSequence[currentIndex] !== sequence[currentIndex]) {
-                    alert(`Game Over! Final Score: ${score - 1}`);
+                    const finalScore = score - 1;
+                    if (finalScore > highScore) {
+                        highScore = finalScore;
+                        localStorage.setItem('colorMemoryHighScore', highScore);
+                        alert(`New High Score! 🎉 Score: ${finalScore}`);
+                    } else {
+                        alert(`Game Over! Final Score: ${finalScore}`);
+                    }
                     document.getElementById('start-btn').style.display = 'block';
+                    updateScoreDisplay();
                     isPlaying = false;
                     return;
                 }
